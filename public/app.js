@@ -555,9 +555,16 @@
     f = f || readForm();
     const box = $("pairBrief"); box.replaceChildren();
     let cur;
-    try { cur = Core.pairCurrencies(f.pair); } catch (e) { $("pairTitle").textContent = "Pair brief"; $("pairSub").textContent = ""; box.append(h("p", { class: "empty", text: "Choose a pair like EURUSD to see its brief." })); return; }
+    const newsBox = $("newsBrief"); newsBox.replaceChildren();
+    try { cur = Core.pairCurrencies(f.pair); } catch (e) {
+      $("pairTitle").textContent = "Pair brief"; $("pairSub").textContent = ""; $("newsSub").textContent = "";
+      box.append(h("p", { class: "empty", text: "Choose a pair like EURUSD to see its brief." }));
+      newsBox.append(h("p", { class: "empty", text: "Choose a pair to see its news." }));
+      return;
+    }
     $("pairTitle").textContent = `${cur[0]} / ${cur[1]}`;
-    $("pairSub").textContent = "approximate ranges, live news";
+    $("pairSub").textContent = "approximate ranges";
+    $("newsSub").textContent = `${cur[0]} and ${cur[1]}`;
     const sec = (title, ...kids) => h("div", { class: "pb-sec" }, h("h3", { text: title }), ...kids);
     const now = new Date();
     const out = [];
@@ -599,7 +606,7 @@
       const age = Core.calendarAgeMin(S.calendar, now);
       newsKids.push(h("p", { class: "hint", text: `The next 3 High-impact events for these currencies, soonest first (Medium ones fill the gaps). Click one to open that day on Forex Factory. Forex Factory calendar${age === null ? "" : `, updated ${dur(Math.max(0, age))} ago`}. Times in ${tz()}.` + (age !== null && age > 240 ? " This is old: the hourly refresh may have stopped." : "") }));
     }
-    out.push(sec(`Next news for ${cur[0]} and ${cur[1]}`, ...newsKids));
+    newsBox.append(h("div", { class: "pb" }, newsKids)); // its own card, left column
 
     // 3. your own record on this pair
     const rec = Core.pairRecord(S.trades, f.pair);
