@@ -99,8 +99,9 @@ nav.side {
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
 h2 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
 .view { display: flex; flex-direction: column; gap: 20px; }
-.view.plan { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
-#cardCalc { order: 1; } #cardPair { order: 2; } #cardRules { order: 3; } #cardLog { order: 4; } #cardChart { order: 5; grid-column: 1 / -1; } #cardRecent { order: 6; } #cardHours { order: 7; }
+.view.plan, .view.pairview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+#cardChart { grid-column: 1 / -1; }
+.lbl-short { display: none; }
 .col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
@@ -188,6 +189,9 @@ button:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
 .recent { display: flex; flex-direction: column; }
 .rrow { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
 .rrow:first-child { border-top: 0; padding-top: 0; }
+.rrow.click { cursor: pointer; border-radius: 10px; }
+.rrow.click:hover { background: rgba(255,255,255,.05); }
+.rrow.click:focus-visible { outline: 2px solid var(--lime); }
 .badge { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex: none; font-weight: 700; background: rgba(255,255,255,.07); color: var(--muted); }
 .badge.up { background: rgba(198,242,58,.14); color: var(--lime); }
 .badge.dn { background: rgba(255,107,100,.14); color: var(--down); }
@@ -429,7 +433,7 @@ mark.cdx-marker { background: rgba(198,242,58,.34); color: inherit; padding: 1px
 
 /* ---- tablet and phone ---- */
 @media (max-width: 1180px) {
-  .view.plan { grid-template-columns: 1fr; }
+  .view.plan, .view.pairview { grid-template-columns: 1fr; }
   #cardChart { grid-column: auto; }
 }
 }
@@ -456,6 +460,7 @@ mark.cdx-marker { background: rgba(198,242,58,.34); color: inherit; padding: 1px
   nav.side .brand, nav.side .side-note { display: none; }
   .links { flex-direction: row; width: 100%; gap: 6px; }
   .links a { flex: 1; flex-direction: column; gap: 3px; padding: 8px 0; font-size: 12.5px; justify-content: center; }
+  .lbl-long { display: none; } .lbl-short { display: inline; }
   .brand-m { display: flex; padding: 0; }
   .stats { flex: 1 1 100%; order: 3; }
   .stat { flex: 1 1 140px; }
@@ -490,6 +495,7 @@ mark.cdx-marker { background: rgba(198,242,58,.34); color: inherit; padding: 1px
     </div>
     <div class="links">
       <a href="#plan" id="nav-plan"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>Plan</a>
+      <a href="#pair" id="nav-pair"><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3.2M20 16H6l3 3.2"/></svg><span class="lbl-long">Pair analysis</span><span class="lbl-short">Pair</span></a>
       <a href="#journal" id="nav-journal"><svg viewBox="0 0 24 24"><path d="M6 3.5h10.5a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H6z"/><path d="M6 3.5v17M10.5 8.5h4.5M10.5 12.5h4.5"/></svg>Journal</a>
       <a href="#rules" id="nav-rules"><svg viewBox="0 0 24 24"><path d="M4 7h9M18 7h2M4 17h3M12 17h8"/><circle cx="15.5" cy="7" r="2.3"/><circle cx="9.5" cy="17" r="2.3"/></svg>Rules</a>
     </div>
@@ -510,6 +516,32 @@ mark.cdx-marker { background: rgba(198,242,58,.34); color: inherit; padding: 1px
 
     <!-- PLAN -->
     <main id="view-plan" class="view plan" hidden>
+      <section class="card glow" id="cardChart">
+        <div class="card-head">
+          <h2>Equity curve</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div class="mini" role="group" aria-label="Metric"><button type="button" id="mMoney" aria-pressed="true">Money</button><button type="button" id="mR" aria-pressed="false">R</button></div>
+            <div class="mini"><select id="chartRange" aria-label="Range"><option value="all">All time</option><option value="30">30 days</option><option value="7">7 days</option></select></div>
+          </div>
+        </div>
+        <div class="hero"><b id="heroValue">—</b><span class="delta flat" id="heroPct" hidden></span></div>
+        <p class="sub" id="heroSub">Equity from the calculator. The curve shows closed-trade results.</p>
+        <div class="chart" id="chart"></div>
+        <div class="tip" id="chartTip" hidden></div>
+      </section>
+
+      <section class="card" id="cardRecent">
+        <div class="card-head"><h2>Recent trades</h2><a class="link" href="#journal">View all</a></div>
+        <div class="recent" id="recent"></div>
+      </section>
+
+      <section class="card" id="cardHours">
+        <div class="card-head"><h2>Market hours</h2><span class="sub" id="hoursNote"></span></div>
+        <div class="sessions" id="sessions"></div>
+      </section>
+    </main>
+
+    <main id="view-pair" class="view pairview" hidden>
       <section class="card" id="cardCalc">
         <div class="card-head"><h2>Position size calculator</h2></div>
         <div class="stack">
@@ -573,30 +605,6 @@ mark.cdx-marker { background: rgba(198,242,58,.34); color: inherit; padding: 1px
           <p class="err" id="logMsg" hidden></p>
           <button class="primary" id="logBtn" type="button" disabled>Log trade</button>
         </div>
-      </section>
-
-      <section class="card glow" id="cardChart">
-        <div class="card-head">
-          <h2>Equity curve</h2>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <div class="mini" role="group" aria-label="Metric"><button type="button" id="mMoney" aria-pressed="true">Money</button><button type="button" id="mR" aria-pressed="false">R</button></div>
-            <div class="mini"><select id="chartRange" aria-label="Range"><option value="all">All time</option><option value="30">30 days</option><option value="7">7 days</option></select></div>
-          </div>
-        </div>
-        <div class="hero"><b id="heroValue">—</b><span class="delta flat" id="heroPct" hidden></span></div>
-        <p class="sub" id="heroSub">Equity from the calculator. The curve shows closed-trade results.</p>
-        <div class="chart" id="chart"></div>
-        <div class="tip" id="chartTip" hidden></div>
-      </section>
-
-      <section class="card" id="cardRecent">
-        <div class="card-head"><h2>Recent trades</h2><a class="link" href="#journal">View all</a></div>
-        <div class="recent" id="recent"></div>
-      </section>
-
-      <section class="card" id="cardHours">
-        <div class="card-head"><h2>Market hours</h2><span class="sub" id="hoursNote"></span></div>
-        <div class="sessions" id="sessions"></div>
       </section>
     </main>
 

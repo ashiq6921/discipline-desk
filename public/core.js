@@ -583,6 +583,12 @@
     };
   }
 
+  /** Your most recent trades (open or closed) on one pair, newest first. */
+  function lastTradesOnPair(trades, pair, n = 3) {
+    let key; try { const [b, q] = parsePair(pair); key = b + q; } catch (e) { return []; }
+    return trades.filter((t) => t.pair === key).sort((a, b) => (a.opened_at < b.opened_at ? 1 : -1)).slice(0, n);
+  }
+
   /** What a trade does to each currency: buying EURUSD is long EUR and short USD. */
   function currencyLegs(pair, direction) {
     const [b, q] = pairCurrencies(pair), up = checkDirection(direction) === BUY;
@@ -631,7 +637,7 @@
   root.Core = {
     num, plain, fixed, toNum, parsePair, pipSize, pipValuePerLot, calculatePosition, suggestStop,
     drawdownPct, allowedRiskPct, checkRules, localDay, dayStats, buildTrade, buildSimpleEntry, parseMoney, parseRatio, closeTrade, summarize, journalStats, dailyNet, notesToText, notesForStorage, imagePaths,
-    typicalRange, stopCheck, pairCurrencies, forexFactoryDayUrl, upcomingEvents, newsWarnings, calendarAgeMin, pairRecord, currencyLegs, exposureCheck, TYPICAL_RANGES,
+    typicalRange, stopCheck, pairCurrencies, forexFactoryDayUrl, upcomingEvents, newsWarnings, calendarAgeMin, pairRecord, lastTradesOnPair, currencyLegs, exposureCheck, TYPICAL_RANGES,
     toCsv, COLUMNS, DEFAULT_RULES, BUY, SELL,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = root.Core;

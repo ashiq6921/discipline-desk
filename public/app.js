@@ -435,7 +435,8 @@
           h("small", { text: p.t ? `${p.t.pair} ${p.t.direction === "buy" ? "long" : "short"} · ${hasR(p.t) ? signed(p.t.result_r) + "R" : signedMoney(p.t.net_money, 0)}` : "Start" })));
       tip.hidden = false;
       const hostBox = host.getBoundingClientRect(), cardBox = tip.offsetParent ? tip.offsetParent.getBoundingClientRect() : hostBox;
-      tip.style.left = Math.min(Math.max(hostBox.left - cardBox.left + (x / W) * hostBox.width, 70), cardBox.width - 70) + "px";
+      const half = tip.offsetWidth / 2 + 10; // keep the whole tooltip inside the card, whatever its width
+      tip.style.left = Math.min(Math.max(hostBox.left - cardBox.left + (x / W) * hostBox.width, half), cardBox.width - half) + "px";
       tip.style.top = hostBox.top - cardBox.top + (y / H) * hostBox.height + "px";
       tip.style.transform = (y / H) * hostBox.height < 70 ? "translate(-50%, 18px)" : ""; // near the top: show the tooltip below the point
     };
@@ -542,7 +543,7 @@
     } catch (e) {
       S.calendarError = window.claude ? "News needs the hosted app. It cannot load inside the Artifact." : "News is not available right now.";
     }
-    if (!$("view-plan").hidden) compute();
+    if (!$("view-pair").hidden) compute();
   }
 
   function pipsBetween(pair, a, b) {
@@ -602,10 +603,22 @@
 
     // 3. your own record on this pair
     const rec = Core.pairRecord(S.trades, f.pair);
+    const last3 = Core.lastTradesOnPair(S.trades, f.pair, 3);
     out.push(sec(`Your record on ${cur[0]}${cur[1]}`, rec.n
       ? h("p", { class: "pb-line" }, h("b", { text: `${rec.n} closed trade${rec.n === 1 ? "" : "s"}` }), ` · ${Math.round(rec.winRate * 100)}% won · net `, h("b", { class: cls(rec.net), text: signedMoney(rec.net, 0) }),
           rec.avgR === null ? "" : ` · average ${signed(rec.avgR)}R`, rec.open ? ` · ${rec.open} open` : "", rec.n < 10 ? ". Only a few trades, so this is weak evidence." : ".")
-      : h("p", { class: "pb-line", text: rec.open ? `No closed trades yet, ${rec.open} open.` : "No trades on this pair yet." })));
+      : h("p", { class: "pb-line", text: rec.open ? `No closed trades yet, ${rec.open} open.` : "No trades on this pair yet." }),
+      last3.length ? h("h3", { text: `Last ${last3.length} trade${last3.length === 1 ? "" : "s"} on ${cur[0]}${cur[1]}`, style: "margin-top:6px" }) : null,
+      last3.length ? h("div", { class: "recent" }, last3.map((t) => {
+        const open = t.status === "open";
+        return h("div", { class: "rrow click", role: "button", tabindex: "0", title: "Open this entry", onclick: () => openEntry(t),
+          onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEntry(t); } } },
+          h("div", { class: "badge " + (t.direction === "buy" ? "up" : "dn"), text: t.direction === "buy" ? "▲" : "▼" }),
+          h("div", { class: "rmain" }, h("b", { text: t.direction === "buy" ? "Long" : "Short" }), h("small", { text: [t.setup_tag, t.reason].filter(Boolean).join(" · ").slice(0, 70) || fmtDay(t.opened_at) })),
+          h("div", { class: "rval" },
+            h("b", { class: open ? "" : cls(t.net_money), text: open ? "open" : hasR(t) ? signed(t.result_r) + "R" : signedMoney(t.net_money, 0) }),
+            h("small", { text: fmtDay(t.opened_at) })));
+      })) : null));
 
     // 4. overlap with your open trades
     const ex = Core.exposureCheck(f.pair, f.direction, S.trades);
@@ -1201,13 +1214,15 @@
 
   // ---------- routing and boot ------------------------------------------------------------------------------------------
   function route() {
-    const name = ["plan", "journal", "rules"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "plan";
-    for (const v of ["plan", "journal", "rules"]) {
+    const VIEWS = ["plan", "pair", "journal", "rules"];
+    const name = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "plan";
+    for (const v of VIEWS) {
       $("view-" + v).hidden = v !== name;
       if (v === name) $("nav-" + v).setAttribute("aria-current", "page"); else $("nav-" + v).removeAttribute("aria-current");
     }
     window.scrollTo(0, 0);
-    if (name === "plan") { renderChart(); renderSessions(); }
+    if (name === "plan") { renderChart(); renderSessions(); renderRecent(); }
+    if (name === "pair") compute();
     if (name === "journal") renderJournal();
   }
 
@@ -1228,7 +1243,7 @@
     $("calNext").addEventListener("click", () => shiftMonth(1));
     $("calToday").addEventListener("click", () => { S.cal = { y: ty, m: tm - 1 }; S.dayFilter = null; renderCalendar(); renderTradeLog(); });
     $("calPick").addEventListener("change", (e) => { const [y, m] = e.target.value.split("-").map(Number); if (y && m) { S.cal = { y, m: m - 1 }; S.dayFilter = null; renderCalendar(); renderTradeLog(); } });
-    setInterval(() => { if (!$("view-plan").hidden) { renderSessions(); renderPairBrief(); } }, 30000);
+    setInterval(() => { if (!$("view-plan").hidden) renderSessions(); if (!$("view-pair").hidden) renderPairBrief(); }, 30000);
     loadCalendar(); setInterval(loadCalendar, 10 * 60 * 1000);
     for (const id of ["pair", "tf", "entry", "stop", "target", "risk", "atr", "atrMult", "conv", "equity", "dayStart"]) $(id).addEventListener("input", compute);
     document.querySelectorAll('input[name="dir"]').forEach((r) => r.addEventListener("change", compute));
@@ -1242,7 +1257,7 @@
     $("shotInput").addEventListener("change", () => { if ($("shotInput").files[0]) setShot($("shotInput").files[0]); });
     $("shotClear").addEventListener("click", clearShot);
     document.addEventListener("paste", (e) => { // paste a copied screenshot straight into the log form
-      if ($("shotField").hidden || $("view-plan").hidden) return;
+      if ($("shotField").hidden || $("view-pair").hidden) return;
       const item = [...(e.clipboardData ? e.clipboardData.items : [])].find((i) => i.type.startsWith("image/"));
       if (item) { e.preventDefault(); setShot(item.getAsFile()); }
     });
