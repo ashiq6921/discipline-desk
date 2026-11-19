@@ -1,0 +1,798 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" data-hosted>
+<title>Discipline Desk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: sidebar + dashboard on desktop (equity curve, rule check, recent trades, market hours on the left;
+   calculator and log form on the right). One column with a bottom tab bar on a phone.
+   Look: deep green-black ground with soft green glows, frosted glass panels, one lime accent.
+   Lime is the brand colour. Up is soft green, down is red, caution is amber.
+   Committed to one dark look on purpose. */
+:root {
+  color-scheme: dark;
+  --bg: #06100D; --ink: #E9F4EF; --muted: #7E968C; --faint: #4F655C;
+  --lime: #C6F23A; --lime-2: #A9DB1F; --on-lime: #0A1705;
+  --up: #93E76A; --down: #FF6B64; --amber: #F2B955;
+  --glass: linear-gradient(155deg, rgba(255,255,255,.08), rgba(255,255,255,.025) 42%, rgba(255,255,255,.04));
+  --edge: rgba(255,255,255,.09); --field: rgba(255,255,255,.045); --field-edge: rgba(255,255,255,.075);
+  --track: rgba(255,255,255,.08); --line: rgba(255,255,255,.07);
+  --sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { background: var(--bg); }
+body {
+  margin: 0; color: var(--ink); font: 14.5px/1.45 var(--sans); font-variant-numeric: tabular-nums;
+  background:
+    radial-gradient(900px 560px at 72% 2%, rgba(70,170,90,.30), transparent 62%),
+    radial-gradient(720px 540px at 4% 96%, rgba(30,125,85,.30), transparent 60%),
+    radial-gradient(620px 420px at 100% 100%, rgba(120,190,60,.12), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 104px;
+  min-height: 100vh;
+}
+.shell { max-width: 1480px; margin: 0 auto; display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 22px; align-items: start; }
+.stage { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+/* ---- sidebar / tab bar ---- */
+nav.side {
+  position: sticky; top: 12px; height: calc(100dvh - 24px); display: flex; flex-direction: column; gap: 22px; padding: 22px 16px 16px;
+  background: var(--glass); border: 1px solid var(--edge); border-radius: 22px;
+  backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 30px 60px -30px rgba(0,0,0,.7);
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .02em; font-size: 15px; padding: 0 6px; }
+.brand svg { width: 30px; height: 30px; flex: none; }
+.links { display: flex; flex-direction: column; gap: 8px; }
+.links a {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; color: var(--muted);
+  text-decoration: none; font-weight: 600; border: 1px solid transparent;
+}
+.links a svg { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.links a[aria-current="page"] {
+  color: var(--ink); border-color: rgba(198,242,58,.22);
+  background: linear-gradient(90deg, rgba(120,200,60,.38), rgba(120,200,60,.06) 85%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+.links a[aria-current="page"] svg { color: var(--lime); }
+.links a:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.side-note { margin-top: auto; padding: 14px; border-radius: 16px; background: rgba(255,255,255,.04); border: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+.side-note b { display: block; color: var(--ink); font-size: 13px; margin-bottom: 4px; }
+
+/* ---- top bar ---- */
+.top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.brand-m { display: none; }
+.acct { display: flex; flex-direction: column; line-height: 1.25; margin-right: 4px; }
+.acct b { font-size: 16px; }
+.acct span { font-size: 12.5px; color: var(--muted); }
+.stats { display: flex; gap: 10px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.stat {
+  display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-radius: 14px; background: rgba(255,255,255,.045); border: 1px solid var(--line);
+}
+.stat > div { display: flex; flex-direction: column; line-height: 1.2; }
+.stat small { color: var(--muted); font-size: 12px; }
+.stat b { font-size: 16px; font-weight: 600; }
+.delta { font-size: 12px; font-weight: 600; border-radius: 8px; padding: 3px 7px; white-space: nowrap; background: rgba(147,231,106,.12); color: var(--up); }
+.delta.down { background: rgba(255,107,100,.14); color: var(--down); }
+.delta.flat { background: rgba(255,255,255,.08); color: var(--muted); }
+.pill { font-size: 12.5px; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; color: var(--muted); background: rgba(255,255,255,.04); white-space: nowrap; }
+.pill.ok { color: var(--lime); border-color: rgba(198,242,58,.3); }
+.pill.bad { color: var(--amber); border-color: rgba(242,185,85,.4); background: rgba(242,185,85,.1); }
+
+/* ---- glass panels ---- */
+.card {
+  position: relative; background: var(--glass); border: 1px solid var(--edge); border-radius: 22px; padding: 22px; min-width: 0;
+  backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 30px 60px -34px rgba(0,0,0,.75);
+}
+.card.glow::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(520px 300px at 62% 55%, rgba(110,190,50,.22), transparent 70%);
+}
+.card > * { position: relative; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+h2 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
+.view { display: flex; flex-direction: column; gap: 20px; }
+.view.plan { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 20px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.duo { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+/* ---- forms ---- */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field > span, .label { font-size: 13px; color: var(--muted); font-weight: 500; }
+input, select, textarea, button { font: inherit; color: inherit; }
+input, select, textarea {
+  width: 100%; min-width: 0; min-height: 46px; padding: 10px 14px; background: var(--field); border: 1px solid var(--field-edge);
+  border-radius: 12px; font-size: 16px; font-variant-numeric: tabular-nums;
+}
+input::placeholder, textarea::placeholder { color: var(--faint); }
+select option { background: #0E1915; color: var(--ink); }
+textarea { min-height: 84px; resize: vertical; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, .seg input:focus-visible + label {
+  outline: 2px solid var(--lime); outline-offset: 1px; border-color: transparent;
+}
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: var(--field); border: 1px solid var(--field-edge); }
+.seg > div { display: contents; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; width: 1px; min-height: 0; }
+.seg label { display: flex; align-items: center; justify-content: center; min-height: 40px; border-radius: 10px; font-weight: 600; cursor: pointer; color: var(--muted); }
+.seg input:checked + label { background: linear-gradient(180deg, #D3FA52, #B5E52A); color: var(--on-lime); box-shadow: 0 6px 18px -8px rgba(198,242,58,.6); }
+.hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+button { cursor: pointer; min-height: 46px; border-radius: 12px; border: 1px solid var(--field-edge); background: var(--field); padding: 0 18px; font-weight: 600; }
+button.primary { background: linear-gradient(180deg, #D3FA52, #B5E52A); color: var(--on-lime); border-color: transparent; box-shadow: 0 10px 26px -10px rgba(198,242,58,.55); }
+button.ghost { background: transparent; }
+button.small { min-height: 36px; padding: 0 14px; font-size: 13.5px; border-radius: 10px; }
+button:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 36px; padding: 0 14px; border-radius: 999px; font-weight: 500; font-size: 13.5px; }
+.chip[aria-pressed="true"] { background: rgba(198,242,58,.16); color: var(--lime); border-color: rgba(198,242,58,.4); }
+.mini { display: inline-flex; gap: 4px; padding: 3px; border-radius: 12px; background: var(--field); border: 1px solid var(--field-edge); }
+.mini button { min-height: 30px; padding: 0 12px; border: 0; background: transparent; color: var(--muted); font-size: 13px; border-radius: 9px; }
+.mini button[aria-pressed="true"] { background: rgba(255,255,255,.1); color: var(--ink); }
+.mini select { min-height: 36px; width: auto; padding: 4px 28px 4px 12px; border: 0; background-color: transparent; font-size: 13.5px; }
+
+/* ---- results ---- */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tile { padding: 14px 16px; border-radius: 16px; background: linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.025)); border: 1px solid var(--line); min-width: 0; }
+.tile small { display: block; color: var(--muted); font-size: 12.5px; }
+.tile b { display: block; font-size: 28px; font-weight: 600; line-height: 1.15; margin: 4px 0 2px; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.tile span { font-size: 12.5px; color: var(--muted); }
+.rows { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 16px 0 0; }
+.rows dt { color: var(--muted); font-size: 13.5px; }
+.rows dd { margin: 0; text-align: right; font-weight: 500; }
+.empty { color: var(--muted); margin: 0; }
+.empty.center { text-align: center; padding: 70px 10px; }
+.err { color: var(--down); margin: 0; font-size: 14px; }
+.warns { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.warns li { background: rgba(242,185,85,.1); color: var(--amber); border: 1px solid rgba(242,185,85,.32); border-radius: 12px; padding: 10px 13px; font-size: 13.5px; }
+.warns li strong { font-weight: 600; text-transform: capitalize; }
+.clear { background: rgba(147,231,106,.1); color: var(--up); border: 1px solid rgba(147,231,106,.25); border-radius: 12px; padding: 10px 13px; font-size: 13.5px; margin-top: 16px; }
+.atr-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: 13.5px; color: var(--muted); }
+
+/* ---- dashboard bits ---- */
+.hero { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.hero b { font-size: 40px; line-height: 1.1; font-weight: 600; letter-spacing: -.02em; }
+.hero .delta { font-size: 13.5px; padding: 5px 9px; }
+.sub { color: var(--muted); font-size: 13px; margin: 0; }
+.chart { position: relative; height: 270px; margin-top: 8px; touch-action: pan-y; }
+.chart svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.chart .ax { fill: var(--muted); font: 12px var(--sans); }
+.chart .glowline { filter: drop-shadow(0 0 7px rgba(198,242,58,.55)); }
+.tip {
+  position: absolute; pointer-events: none; transform: translate(-50%, calc(-100% - 14px)); padding: 8px 12px 8px 8px; border-radius: 14px;
+  display: flex; align-items: center; gap: 10px; background: rgba(20,32,27,.82); border: 1px solid var(--edge);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); white-space: nowrap; z-index: 3;
+}
+.tip i { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: rgba(147,231,106,.16); color: var(--up); font-style: normal; font-weight: 700; }
+.tip i.down { background: rgba(255,107,100,.16); color: var(--down); }
+.tip b { display: block; font-size: 15px; line-height: 1.15; }
+.tip small { color: var(--muted); font-size: 12px; }
+.meter { display: flex; flex-direction: column; gap: 7px; padding: 12px 0; border-top: 1px solid var(--line); }
+.meter:first-child { border-top: 0; padding-top: 0; }
+.meter-top { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; }
+.meter-top span { color: var(--muted); }
+.meter-top b { font-weight: 600; }
+.bar { height: 7px; border-radius: 99px; background: var(--track); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #7BCB2A, var(--lime)); min-width: 0; }
+.bar.warn i { background: linear-gradient(90deg, #D69A2D, var(--amber)); }
+.bar.over i { background: linear-gradient(90deg, #E4504A, var(--down)); }
+.meter small { color: var(--muted); font-size: 12px; }
+.recent { display: flex; flex-direction: column; }
+.rrow { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
+.rrow:first-child { border-top: 0; padding-top: 0; }
+.badge { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; flex: none; font-weight: 700; background: rgba(255,255,255,.07); color: var(--muted); }
+.badge.up { background: rgba(198,242,58,.14); color: var(--lime); }
+.badge.dn { background: rgba(255,107,100,.14); color: var(--down); }
+.rmain { flex: 1; min-width: 0; line-height: 1.25; }
+.rmain b { display: block; font-weight: 600; }
+.rmain small { color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
+.rval { text-align: right; line-height: 1.25; }
+.rval b { display: block; font-weight: 600; }
+.rval small { color: var(--muted); font-size: 12px; }
+.pos { color: var(--up); } .neg { color: var(--down); }
+.link { color: var(--lime); text-decoration: none; font-weight: 600; font-size: 13.5px; }
+.sessions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.sess { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; padding: 14px 6px; border-radius: 16px; background: rgba(255,255,255,.035); border: 1px solid var(--line); }
+.sess.open { background: linear-gradient(180deg, rgba(198,242,58,.12), rgba(198,242,58,.03)); border-color: rgba(198,242,58,.3); }
+.sess svg { width: 24px; height: 24px; fill: none; stroke: var(--muted); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.sess.open svg { stroke: var(--lime); }
+.sess b { font-weight: 600; }
+.sess small { color: var(--muted); font-size: 12px; }
+
+/* ---- journal ---- */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 4px; }
+.kpi b { display: block; font-size: 26px; font-weight: 600; margin-top: 4px; }
+.kpi small { color: var(--muted); font-size: 12.5px; }
+.banner { background: rgba(255,255,255,.04); border: 1px dashed var(--field-edge); border-radius: 12px; padding: 10px 14px; font-size: 13.5px; color: var(--muted); margin: 16px 0 0; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: right; font-size: 12px; color: var(--muted); font-weight: 600; padding: 6px 8px 8px 0; }
+th:first-child, td:first-child { text-align: left; }
+td { padding: 10px 8px 10px 0; border-top: 1px solid var(--line); text-align: right; }
+td:first-child { font-weight: 500; overflow-wrap: anywhere; }
+.trade-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; }
+.trade { display: flex; flex-direction: column; gap: 10px; }
+.trade-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.trade-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 600; font-size: 16px; }
+.tag { font-size: 11.5px; font-weight: 600; letter-spacing: .05em; border: 1px solid var(--field-edge); border-radius: 7px; padding: 2px 7px; color: var(--muted); }
+.r { font-size: 20px; font-weight: 600; }
+.r.open { color: var(--muted); font-size: 13px; font-weight: 500; }
+.meta { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.nums { font-size: 13px; color: var(--muted); }
+.note { font-size: 14px; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.closeform { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 4px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+.thumb { width: 100%; max-height: 190px; object-fit: cover; border-radius: 14px; border: 1px solid var(--line); cursor: zoom-in; background: rgba(255,255,255,.04); min-height: 60px; }
+.shot-preview { max-width: 100%; max-height: 200px; border-radius: 12px; border: 1px solid var(--line); align-self: flex-start; }
+input[type="file"] { padding: 9px 12px; min-height: 46px; font-size: 14px; }
+.auth, .lightbox { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; background: rgba(4,10,8,.78); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.auth .card { width: min(400px, 100%); background: linear-gradient(155deg, rgba(40,58,50,.95), rgba(14,24,20,.96)); }
+.lightbox { cursor: zoom-out; z-index: 60; }
+.lightbox img { max-width: 96vw; max-height: 92vh; border-radius: 12px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+/* ---- pair brief ---- */
+.pb { display: flex; flex-direction: column; gap: 0; }
+.pb-sec { padding: 14px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.pb-sec:first-child { border-top: 0; padding-top: 0; }
+.pb-sec h3 { font-size: 11.5px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 600; }
+.pb-big { font-size: 20px; font-weight: 600; }
+.pb-big small { font-size: 12.5px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+.pb-line { font-size: 13.5px; color: var(--muted); margin: 0; }
+.pb-line b { color: var(--ink); font-weight: 600; }
+.pb-line.flag b { color: var(--amber); }
+.rbar { position: relative; height: 12px; border-radius: 99px; background: rgba(255,255,255,.07); margin: 8px 0 18px; }
+.rbar .band { position: absolute; top: 0; bottom: 0; border-radius: 99px; background: rgba(198,242,58,.3); border: 1px solid rgba(198,242,58,.55); }
+.rbar .mk { position: absolute; top: -5px; width: 3px; height: 22px; border-radius: 2px; transform: translateX(-1px); }
+.rbar .mk.stop { background: var(--down); } .rbar .mk.tgt { background: var(--up); }
+.rbar .tick { position: absolute; top: 18px; font-size: 10.5px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
+.evt { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: start; padding: 9px 0; border-top: 1px solid var(--line); }
+.evt:first-of-type { border-top: 0; }
+.imp { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; border-radius: 6px; padding: 2px 7px; text-transform: uppercase; }
+.imp.High { background: rgba(255,107,100,.16); color: var(--down); } .imp.Medium { background: rgba(242,185,85,.16); color: var(--amber); }
+.evt b { font-weight: 600; font-size: 13.5px; }
+.evt small { color: var(--muted); font-size: 12px; display: block; }
+.evt .when { text-align: right; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.evt .when b { display: block; color: var(--ink); }
+.heads { background: rgba(242,185,85,.1); border: 1px solid rgba(242,185,85,.32); color: var(--amber); border-radius: 12px; padding: 9px 12px; font-size: 13.5px; }
+
+/* ---- journal: KPI bar, calendar, trade rows ---- */
+.jtop { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.jtitle { font-size: 24px; }
+.kpibar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 0; overflow: hidden; }
+.kcell { padding: 20px 22px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.kcell:first-child { border-left: 0; }
+.kcell small { color: var(--muted); font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; font-weight: 600; }
+.kcell b { font-size: 30px; font-weight: 600; letter-spacing: -.02em; line-height: 1.1; overflow-wrap: anywhere; }
+.kcell span { color: var(--muted); font-size: 12.5px; }
+.jgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 20px; align-items: stretch; }
+.sub.dd b { color: var(--down); font-weight: 600; }
+.calbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.calnav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.calnav input[type="month"] { width: 168px; min-height: 36px; padding: 4px 10px; font-size: 14px; }
+.calsum { display: flex; gap: 14px; font-size: 12.5px; color: var(--muted); }
+.calsum b { display: block; color: var(--ink); font-size: 14px; font-weight: 600; }
+.calgrid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)) 76px; gap: 6px; }
+.dow { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; text-align: center; padding: 2px 0 4px; }
+.day { min-height: 64px; border-radius: 10px; padding: 6px 7px; background: rgba(255,255,255,.025); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 11px; }
+.day .dn { color: var(--faint); font-size: 11px; }
+.day.off { opacity: .45; }
+.day .dv { font-weight: 600; font-size: 12px; white-space: nowrap; line-height: 1.15; }
+#jChartCard { display: flex; flex-direction: column; }
+#jChart { flex: 1; height: auto; min-height: 270px; }
+.day .ds { color: var(--muted); font-size: 10.5px; line-height: 1.2; }
+.day.win { background: rgba(147,231,106, var(--a, .16)); border-color: rgba(147,231,106,.28); }
+.day.win .dv { color: var(--up); }
+.day.loss { background: rgba(255,107,100, var(--a, .16)); border-color: rgba(255,107,100,.3); }
+.day.loss .dv { color: var(--down); }
+.day.click { cursor: pointer; }
+.day.today { outline: 1.5px solid var(--lime); outline-offset: -1px; }
+.day.sel { box-shadow: inset 0 0 0 2px var(--lime); }
+.day:focus-visible { outline: 2px solid var(--lime); }
+.wk { border-radius: 10px; border: 1px solid var(--line); padding: 6px 8px; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 2px; font-size: 10.5px; color: var(--muted); text-align: right; }
+.wk b { font-size: 12.5px; color: var(--ink); font-weight: 600; }
+.jhead, .jrow { display: grid; grid-template-columns: 40px 86px minmax(0, 1.25fr) 52px minmax(0, 1fr) 74px 62px 84px 64px minmax(0, 1.6fr) 34px; gap: 10px; align-items: center; }
+.jhead { padding: 0 16px 10px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+.jhead .rt, .c-gross, .c-cost, .c-net, .c-r { text-align: right; }
+.jtrade { border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.03); overflow: hidden; }
+.jtrade + .jtrade { margin-top: 8px; }
+.jtrade.leak { background: repeating-linear-gradient(135deg, rgba(242,185,85,.11) 0 7px, rgba(242,185,85,.03) 7px 14px); border-color: rgba(242,185,85,.3); }
+.jtrade.isopen { border-style: dashed; border-color: rgba(198,242,58,.35); }
+.jrow { padding: 12px 16px; font-size: 13.5px; cursor: pointer; }
+.jrow:hover { background: rgba(255,255,255,.04); }
+.jrow:focus-visible { outline: 2px solid var(--lime); outline-offset: -2px; }
+.c-no { color: var(--faint); }
+.c-date, .c-size small, .c-pair small { color: var(--muted); }
+.c-pair b { font-weight: 600; }
+.c-pair small { display: block; font-size: 11.5px; }
+.c-pair small.long { color: var(--up); } .c-pair small.short { color: var(--down); }
+.c-size { line-height: 1.25; } .c-size small { display: block; font-size: 11.5px; }
+.c-net { font-weight: 600; }
+.out { font-size: 11px; font-weight: 700; letter-spacing: .05em; border-radius: 6px; padding: 2px 7px; display: inline-block; }
+.out-TP { background: rgba(147,231,106,.14); color: var(--up); } .out-SL { background: rgba(255,107,100,.14); color: var(--down); }
+.out-BE { background: rgba(255,255,255,.09); color: var(--muted); } .out-MAN { background: rgba(255,255,255,.09); color: var(--ink); }
+.out-WIN { background: rgba(147,231,106,.14); color: var(--up); } .out-LOSS { background: rgba(255,107,100,.14); color: var(--down); }
+.out-OPEN { border: 1px dashed rgba(198,242,58,.5); color: var(--lime); }
+.c-tags { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.tg { font-size: 11.5px; padding: 2px 8px; border-radius: 7px; border: 1px solid var(--field-edge); color: var(--ink); background: rgba(255,255,255,.05); }
+.tg.setup { background: rgba(198,242,58,.11); border-color: rgba(198,242,58,.3); color: var(--lime); }
+.tg.leak { background: rgba(242,185,85,.12); border-color: rgba(242,185,85,.5); color: var(--amber); }
+.camera { width: 32px; height: 32px; min-height: 32px; padding: 0; border-radius: 9px; display: grid; place-items: center; }
+.camera svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.jdetail { border-top: 1px solid var(--line); padding: 16px; display: grid; gap: 16px; background: rgba(0,0,0,.14); }
+.facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px 18px; }
+.fact small { display: block; color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; }
+.fact b { font-weight: 500; font-size: 14px; }
+/* ---- entry page ---- */
+.jtools { display: flex; align-items: center; gap: 10px; }
+body.noscroll { overflow: hidden; }
+.entry {
+  position: fixed; inset: 0; z-index: 40; overflow-y: auto; overscroll-behavior: contain;
+  background:
+    radial-gradient(900px 560px at 72% 2%, rgba(70,170,90,.26), transparent 62%),
+    radial-gradient(720px 540px at 4% 96%, rgba(30,125,85,.26), transparent 60%),
+    var(--bg);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.entry-page { max-width: 900px; margin: 0 auto; padding-bottom: 140px; }
+.entry-bar {
+  position: sticky; top: 0; z-index: 6; display: flex; align-items: center; gap: 10px; padding: 12px 0;
+  background: linear-gradient(180deg, var(--bg) 70%, transparent);
+}
+.entry-status { color: var(--muted); font-size: 13px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entry-status.dirty { color: var(--amber); }
+.entry-status.ok { color: var(--lime); }
+.entry-actions { display: flex; gap: 8px; }
+button.danger { color: var(--down); border-color: rgba(255,107,100,.35); }
+.entry-title { font-size: 34px; line-height: 1.15; margin: 6px 0 18px; letter-spacing: -.02em; font-weight: 700; }
+.props { display: grid; grid-template-columns: 1fr; gap: 14px; padding: 20px; border-radius: 20px; background: var(--glass); border: 1px solid var(--edge); }
+.row2, .row3, .row4 { display: grid; gap: 12px 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.row2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.row4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.pgroup { font-size: 12px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); font-weight: 600; margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--line); }
+.pgroup .sub { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
+.field small { font-weight: 400; color: var(--faint); margin-left: 4px; }
+.sign { display: flex; gap: 6px; }
+.sign input { flex: 1; }
+.pm { min-width: 46px; padding: 0; font-size: 18px; color: var(--muted); }
+.total { min-height: 46px; display: flex; align-items: center; padding: 0 14px; border-radius: 12px; background: rgba(255,255,255,.03); border: 1px dashed var(--field-edge); font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; }
+.total.pos { color: var(--up); border-color: rgba(147,231,106,.4); background: rgba(147,231,106,.08); }
+.total.neg { color: var(--down); border-color: rgba(255,107,100,.4); background: rgba(255,107,100,.08); }
+.resultbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 0 0 14px; }
+.rbadge { font-size: 13px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.05); color: var(--muted); }
+.rbadge.profit { background: rgba(147,231,106,.16); border-color: rgba(147,231,106,.5); color: var(--up); }
+.rbadge.loss { background: rgba(255,107,100,.16); border-color: rgba(255,107,100,.5); color: var(--down); }
+.rbadge.open { border-style: dashed; border-color: rgba(198,242,58,.5); color: var(--lime); }
+.rtext { color: var(--muted); font-size: 14px; }
+.entry-calc { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; min-height: 34px; }
+.entry-calc .fchip { font-size: 13px; padding: 6px 12px; border-radius: 10px; background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--muted); }
+.entry-calc .fchip b { color: var(--ink); font-weight: 600; }
+.entry-calc .fchip.pos b { color: var(--up); } .entry-calc .fchip.neg b { color: var(--down); }
+.notes-head { display: flex; align-items: baseline; gap: 12px; margin: 30px 0 10px; }
+.notes { min-height: 320px; padding: 8px 4px; font-size: 16px; line-height: 1.6; }
+.notes textarea { min-height: 320px; }
+@media (max-width: 640px) { .props { padding: 16px; } .row3, .row4 { grid-template-columns: 1fr 1fr; } .row2 { grid-template-columns: 1fr; } .entry-title { font-size: 26px; } }
+
+/* ---- Editor.js, dressed in our dark glass look ---- */
+.notes .codex-editor__redactor { padding-bottom: 160px !important; }
+.notes .ce-block__content, .notes .ce-toolbar__content { max-width: 100%; margin: 0; }
+.notes .ce-toolbar__actions { right: auto; left: -62px; }
+@media (max-width: 760px) { .notes .ce-toolbar__actions { left: -4px; top: -2px; } .notes .ce-block__content { padding-left: 38px; } }
+.notes .ce-paragraph, .notes .cdx-block, .notes .ce-header, .notes .cdx-list__item, .notes .cdx-checklist__item-text, .notes .tc-table { color: var(--ink); }
+.notes .ce-paragraph[data-placeholder]:empty::before, .notes .ce-header[data-placeholder]:empty::before { color: var(--faint); }
+.notes .ce-header { padding: .5em 0 4px; }
+.notes .ce-toolbar__plus, .notes .ce-toolbar__settings-btn { color: var(--muted); background: transparent; }
+.notes .ce-toolbar__plus:hover, .notes .ce-toolbar__settings-btn:hover { background: rgba(255,255,255,.09); color: var(--ink); }
+.ce-popover__container, .ce-inline-toolbar, .ce-conversion-toolbar, .ce-settings, .ce-popover { background: #15221D !important; border: 1px solid var(--edge) !important; color: var(--ink) !important; box-shadow: 0 24px 60px rgba(0,0,0,.6) !important; }
+.ce-popover-item, .ce-inline-tool, .ce-popover-item__title { color: var(--ink) !important; }
+.ce-popover-item:hover:not(.ce-popover-item--no-hover), .ce-inline-tool:hover, .ce-popover-item--focused:not(.ce-popover-item--no-focus) { background: rgba(255,255,255,.08) !important; }
+.ce-popover-item__icon { background: rgba(255,255,255,.07) !important; box-shadow: none !important; color: var(--ink) !important; }
+.ce-popover-item__secondary-title, .ce-popover-item__title + div { color: var(--muted) !important; }
+.ce-popover__search, .cdx-search-field { background: rgba(255,255,255,.06) !important; border-color: var(--line) !important; }
+.cdx-search-field__input { color: var(--ink) !important; background: transparent !important; min-height: 0; border: 0; }
+.ce-inline-tool--active, .ce-popover-item--active .ce-popover-item__icon { color: var(--lime) !important; }
+.ce-popover__nothing-found-message { color: var(--muted) !important; }
+.ce-inline-toolbar__dropdown:hover { background: rgba(255,255,255,.08) !important; }
+.ce-inline-tool-input { background: rgba(255,255,255,.06) !important; border-color: var(--line) !important; color: var(--ink) !important; min-height: 0; }
+.notes .cdx-quote__text, .notes .cdx-quote__caption { background: rgba(255,255,255,.04); border: 1px solid var(--line); color: var(--ink); border-radius: 10px; min-height: 0; }
+.notes .ce-code__textarea { background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--ink); border-radius: 10px; min-height: 90px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13.5px; }
+.notes .tc-table, .notes .tc-row, .notes .tc-cell { border-color: var(--line) !important; }
+.notes .tc-add-row, .notes .tc-add-column { color: var(--muted); }
+.notes .tc-add-row:hover, .notes .tc-add-column:hover { background: rgba(255,255,255,.07); }
+.notes .tc-toolbox__toggler svg, .notes .tc-wrap { --color-border: var(--line); --color-background: rgba(255,255,255,.06); --color-text-secondary: var(--muted); }
+.notes .cdx-checklist__item-checkbox, .notes .cdx-checklist__item--checked .cdx-checklist__item-checkbox { border-color: var(--line); background: transparent; }
+.notes .cdx-checklist__item--checked .cdx-checklist__item-checkbox { background: var(--lime); border-color: var(--lime); }
+.notes .cdx-checklist__item--checked .cdx-checklist__item-text { color: var(--muted); text-decoration: line-through; }
+.notes .cdx-checklist__item-checkbox-check svg { stroke: var(--on-lime); }
+.notes .ce-delimiter { line-height: 1.6em; color: var(--muted); }
+.notes .image-tool__image { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+.notes .image-tool__image-picture { max-width: 100%; vertical-align: bottom; display: block; }
+.notes .image-tool .cdx-input, .notes .image-tool__caption { background: transparent; border: 0; box-shadow: none; color: var(--muted); font-size: 13px; text-align: center; min-height: 0; }
+.notes .cdx-button { background: rgba(255,255,255,.05); border: 1px dashed var(--edge); color: var(--muted); border-radius: 12px; min-height: 0; padding: 14px; }
+.notes .cdx-button svg { stroke: var(--muted); }
+.notes .cdx-block .cdx-loader::before { border-color: var(--line); border-top-color: var(--lime); }
+mark.cdx-marker { background: rgba(198,242,58,.34); color: inherit; padding: 1px 0; }
+.inline-code { background: rgba(255,255,255,.1); color: var(--lime); border: 0; border-radius: 5px; padding: 1px 5px; font-size: .9em; }
+.notes ::selection { background: rgba(198,242,58,.3); }
+.toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: rgba(20,32,27,.92); border: 1px solid var(--edge); color: var(--ink); padding: 11px 18px; border-radius: 12px; font-size: 14px; max-width: calc(100vw - 32px); z-index: 70; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+
+/* ---- tablet and phone ---- */
+@media (max-width: 1180px) {
+  .view.plan { grid-template-columns: 1fr; }
+  .view.plan .col { display: contents; }
+  .view.plan .duo { display: contents; }
+  .view.plan > * , .view.plan .col > *, .view.plan .duo > * { min-width: 0; }
+  .view.plan { display: flex; flex-direction: column; }
+  #cardCalc { order: 1; } #cardPair { order: 2; } #cardRules { order: 3; } #cardLog { order: 4; } #cardChart { order: 5; } #cardRecent { order: 6; } #cardHours { order: 7; }
+}
+@media (max-width: 1100px) {
+  .jgrid { grid-template-columns: 1fr; }
+  .kpibar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kcell { border-left: 0; border-top: 1px solid var(--line); }
+  .kcell:nth-child(-n+2) { border-top: 0; }
+  .kcell:nth-child(even) { border-left: 1px solid var(--line); }
+  .kcell:last-child { grid-column: 1 / -1; border-left: 0; }
+  .jhead { display: none; }
+  .jrow { grid-template-columns: 38px minmax(0, 1fr) auto auto; grid-template-areas: "no pair out net" "no date size r" "tags tags tags shot"; gap: 6px 10px; }
+  .c-no { grid-area: no; align-self: start; } .c-pair { grid-area: pair; } .c-out { grid-area: out; justify-self: end; } .c-net { grid-area: net; }
+  .c-date { grid-area: date; font-size: 12.5px; } .c-size { grid-area: size; justify-self: end; } .c-r { grid-area: r; }
+  .c-tags { grid-area: tags; } .c-shot { grid-area: shot; justify-self: end; }
+  .c-gross, .c-cost { display: none; }
+}
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; gap: 16px; }
+  nav.side {
+    position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; top: auto; height: auto; flex-direction: row; gap: 0; border-radius: 20px 20px 0 0; border-bottom: 0;
+    padding: 8px max(12px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  }
+  nav.side .brand, nav.side .side-note { display: none; }
+  .links { flex-direction: row; width: 100%; gap: 6px; }
+  .links a { flex: 1; flex-direction: column; gap: 3px; padding: 8px 0; font-size: 12.5px; justify-content: center; }
+  .brand-m { display: flex; padding: 0; }
+  .stats { flex: 1 1 100%; order: 3; }
+  .stat { flex: 1 1 140px; }
+  .acct { display: none; }
+  .top { justify-content: space-between; }
+  .duo { grid-template-columns: 1fr; }
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width: 520px) {
+  .card { padding: 18px 16px; border-radius: 20px; }
+  .hero b { font-size: 32px; }
+  .tile b { font-size: 24px; }
+  .sessions { grid-template-columns: repeat(2, 1fr); }
+  .grid3 { grid-template-columns: 1fr 1fr; }
+  .trade-grid { grid-template-columns: 1fr; }
+  .chart { height: 230px; }
+  .kcell { padding: 14px 16px; } .kcell b { font-size: 24px; }
+  .calgrid { grid-template-columns: repeat(7, minmax(0, 1fr)) 54px; gap: 4px; }
+  .day { min-height: 50px; padding: 4px 4px; } .day .ds { display: none; } .day .dv { font-size: 11px; }
+  .wk { padding: 4px 4px; font-size: 9.5px; } .wk b { font-size: 11px; }
+  .calnav input[type="month"] { width: 140px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="shell">
+  <nav class="side" aria-label="Sections">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.5l11.7 6.75v13.5L16 29.5 4.3 22.75V9.25z" fill="#C6F23A"/><path d="M10.5 16.5l3.8 3.8 7.2-8" fill="none" stroke="#0A1705" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>DISCIPLINE DESK</span>
+    </div>
+    <div class="links">
+      <a href="#plan" id="nav-plan"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>Plan</a>
+      <a href="#journal" id="nav-journal"><svg viewBox="0 0 24 24"><path d="M6 3.5h10.5a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H6z"/><path d="M6 3.5v17M10.5 8.5h4.5M10.5 12.5h4.5"/></svg>Journal</a>
+      <a href="#rules" id="nav-rules"><svg viewBox="0 0 24 24"><path d="M4 7h9M18 7h2M4 17h3M12 17h8"/><circle cx="15.5" cy="7" r="2.3"/><circle cx="9.5" cy="17" r="2.3"/></svg>Rules</a>
+    </div>
+    <div class="side-note"><b>Demo account only</b>Logging a trade records the plan. It never places an order. You place it yourself in cTrader.</div>
+  </nav>
+
+  <div class="stage">
+    <header class="top">
+      <div class="brand brand-m">
+        <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 2.5l11.7 6.75v13.5L16 29.5 4.3 22.75V9.25z" fill="#C6F23A"/><path d="M10.5 16.5l3.8 3.8 7.2-8" fill="none" stroke="#0A1705" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>DISCIPLINE DESK</span>
+      </div>
+      <div class="acct"><b>Demo account</b><span id="acctSub">IC Markets cTrader</span></div>
+      <div class="stats" id="hdrStats"></div>
+      <span id="storePill" class="pill">Connecting…</span>
+      <button type="button" id="signOut" class="small ghost" hidden>Sign out</button>
+    </header>
+
+    <!-- PLAN -->
+    <main id="view-plan" class="view plan" hidden>
+      <div class="col">
+        <section class="card glow" id="cardChart">
+          <div class="card-head">
+            <h2>Equity curve</h2>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <div class="mini" role="group" aria-label="Metric"><button type="button" id="mMoney" aria-pressed="true">Money</button><button type="button" id="mR" aria-pressed="false">R</button></div>
+              <div class="mini"><select id="chartRange" aria-label="Range"><option value="all">All time</option><option value="30">30 days</option><option value="7">7 days</option></select></div>
+            </div>
+          </div>
+          <div class="hero"><b id="heroValue">—</b><span class="delta flat" id="heroPct" hidden></span></div>
+          <p class="sub" id="heroSub">Equity from the calculator. The curve shows closed-trade results.</p>
+          <div class="chart" id="chart"></div>
+          <div class="tip" id="chartTip" hidden></div>
+        </section>
+
+        <div class="duo">
+          <section class="card" id="cardRules">
+            <div class="card-head"><h2>Rule check</h2></div>
+            <div id="ruleMeters"></div>
+          </section>
+          <section class="card" id="cardRecent">
+            <div class="card-head"><h2>Recent trades</h2><a class="link" href="#journal">View all</a></div>
+            <div class="recent" id="recent"></div>
+          </section>
+        </div>
+
+        <section class="card" id="cardHours">
+          <div class="card-head"><h2>Market hours</h2><span class="sub" id="hoursNote"></span></div>
+          <div class="sessions" id="sessions"></div>
+        </section>
+      </div>
+
+      <div class="col">
+        <section class="card" id="cardCalc">
+          <div class="card-head"><h2>Position size calculator</h2></div>
+          <div class="stack">
+            <div class="grid2">
+              <label class="field"><span>Pair</span><input id="pair" list="pairs" value="EURUSD" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+              <label class="field"><span>Timeframe</span>
+                <select id="tf"><option>M5</option><option>M15</option><option>M30</option><option selected>H1</option><option>H4</option><option>D1</option></select>
+              </label>
+            </div>
+            <datalist id="pairs"><option>EURUSD</option><option>GBPUSD</option><option>USDJPY</option><option>AUDUSD</option><option>USDCAD</option><option>USDCHF</option><option>NZDUSD</option><option>EURJPY</option><option>GBPJPY</option><option>EURGBP</option></datalist>
+            <div class="seg" role="radiogroup" aria-label="Direction">
+              <div><input type="radio" name="dir" id="dir-buy" value="buy" checked><label for="dir-buy">Buy</label></div>
+              <div><input type="radio" name="dir" id="dir-sell" value="sell"><label for="dir-sell">Sell</label></div>
+            </div>
+            <div class="grid2">
+              <label class="field"><span id="entryLabel">Entry (ask)</span><input id="entry" inputmode="decimal" autocomplete="off" placeholder="1.10010"></label>
+              <label class="field"><span>Stop loss</span><input id="stop" inputmode="decimal" autocomplete="off" placeholder="1.09760"></label>
+              <label class="field"><span>Target</span><input id="target" inputmode="decimal" autocomplete="off" placeholder="1.10510"></label>
+              <label class="field"><span>Risk %</span><input id="risk" inputmode="decimal" autocomplete="off"></label>
+              <label class="field"><span id="equityLabel">Equity (USD)</span><input id="equity" inputmode="decimal" autocomplete="off" placeholder="300000"></label>
+              <label class="field"><span>Equity at start of today</span><input id="dayStart" inputmode="decimal" autocomplete="off" placeholder="optional"></label>
+              <label class="field"><span>ATR (price units)</span><input id="atr" inputmode="decimal" autocomplete="off" placeholder="0.0008"></label>
+              <label class="field"><span>ATR multiple</span><input id="atrMult" inputmode="decimal" autocomplete="off" value="1.5"></label>
+            </div>
+            <label class="field" id="convRow" hidden><span id="convLabel">Conversion rate</span><input id="conv" inputmode="decimal" autocomplete="off"></label>
+            <p class="hint" id="riskHint"></p>
+            <div id="result" aria-live="polite"></div>
+            <p class="hint">Copy equity from cTrader, floating profit and loss included. Live balance arrives with the hosted version.</p>
+          </div>
+        </section>
+
+        <section class="card" id="cardPair">
+          <div class="card-head"><h2 id="pairTitle">Pair brief</h2><span class="sub" id="pairSub"></span></div>
+          <div id="pairBrief"></div>
+        </section>
+
+        <section class="card" id="cardLog">
+          <div class="card-head"><h2>Log this trade</h2></div>
+          <div class="stack">
+            <label class="field"><span>Setup</span><input id="setup" list="setups" autocomplete="off" placeholder="breakout, pullback, …"></label>
+            <datalist id="setups"></datalist>
+            <label class="field"><span>Why this trade</span><textarea id="reason" placeholder="What you saw, what has to happen next"></textarea></label>
+            <div class="field" id="shotField" hidden>
+              <span class="label">Chart screenshot</span>
+              <input type="file" id="shotInput" accept="image/*">
+              <img id="shotPreview" class="shot-preview" alt="Screenshot preview" hidden>
+              <button type="button" class="small ghost" id="shotClear" hidden style="align-self:flex-start">Remove screenshot</button>
+              <p class="hint">Tip: on a computer, copy a screenshot and press Ctrl or Cmd + V on this page. Images are shrunk to 2000 px before upload.</p>
+            </div>
+            <p class="err" id="logMsg" hidden></p>
+            <button class="primary" id="logBtn" type="button" disabled>Log trade</button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- JOURNAL -->
+    <main id="view-journal" class="view" hidden>
+      <div class="jtop">
+        <h2 class="jtitle">Journal</h2>
+        <div class="jtools">
+          <div class="mini"><select id="jRange" aria-label="Period"><option value="all">All time</option><option value="90">90 days</option><option value="30">30 days</option><option value="7">7 days</option></select></div>
+          <button type="button" class="primary" id="addEntry">+ Add entry</button>
+        </div>
+      </div>
+
+      <section class="card kpibar" id="kpiBar" aria-label="Key numbers"></section>
+
+      <div class="jgrid">
+        <section class="card glow" id="jChartCard">
+          <div class="card-head">
+            <h2>Equity, net of costs</h2>
+            <div class="mini" role="group" aria-label="Metric"><button type="button" id="jMoney" aria-pressed="true">Money</button><button type="button" id="jR" aria-pressed="false">R</button></div>
+          </div>
+          <p class="sub" id="jChartMeta"></p>
+          <div class="chart" id="jChart"></div>
+          <div class="tip" id="jTip" hidden></div>
+        </section>
+
+        <section class="card" id="calCard">
+          <div class="card-head"><h2>Calendar</h2><span class="sub">Days use the close date</span></div>
+          <div class="calbar">
+            <div class="calnav">
+              <button type="button" class="small" id="calPrev" aria-label="Previous month">‹</button>
+              <input type="month" id="calPick" aria-label="Month">
+              <button type="button" class="small" id="calNext" aria-label="Next month">›</button>
+              <button type="button" class="small ghost" id="calToday">This month</button>
+            </div>
+            <div class="calsum" id="calSum"></div>
+          </div>
+          <div class="calgrid" id="calGrid"></div>
+        </section>
+      </div>
+
+      <section class="card" id="logCard">
+        <div class="card-head">
+          <h2>Trades <span class="sub" id="logCount"></span></h2>
+          <div class="chips" id="logFilters"></div>
+        </div>
+        <div class="jhead" aria-hidden="true">
+          <span>#</span><span>Date</span><span>Pair</span><span>Exit</span><span>Size</span><span class="rt">Gross</span><span class="rt">Costs</span><span class="rt">Net</span><span class="rt">R</span><span>Tags</span><span></span>
+        </div>
+        <div id="tradeList"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Export</h2></div>
+        <button type="button" id="exportBtn">Export CSV</button>
+        <div id="exportFallback" hidden style="margin-top:14px">
+          <p class="hint">Saving files is not available here. Copy this text into a .csv file.</p>
+          <textarea id="csvText" readonly rows="6" style="font-size:12px;margin-top:8px"></textarea>
+          <button type="button" class="small" id="copyCsv" style="margin-top:8px">Copy</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- RULES -->
+    <main id="view-rules" class="view" hidden>
+      <div class="duo">
+        <section class="card">
+          <div class="card-head"><h2>Risk rules</h2></div>
+          <div class="stack">
+            <div class="grid2">
+              <label class="field"><span>Risk per trade %</span><input id="r_risk" inputmode="decimal"></label>
+              <label class="field"><span>Reduced risk %</span><input id="r_reduced" inputmode="decimal"></label>
+              <label class="field"><span>Max trades per day</span><input id="r_trades" inputmode="numeric"></label>
+              <label class="field"><span>Daily loss warning %</span><input id="r_daily" inputmode="decimal"></label>
+              <label class="field"><span>Reduce risk after drawdown %</span><input id="r_ddreduce" inputmode="decimal"></label>
+              <label class="field"><span>Max total drawdown %</span><input id="r_ddmax" inputmode="decimal"></label>
+            </div>
+            <p class="hint">Starting defaults to tune, not proven numbers. The 8% drawdown figure is a placeholder.</p>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>Account and broker</h2></div>
+          <div class="stack">
+            <div class="grid2">
+              <label class="field"><span>Starting balance</span><input id="r_start" inputmode="decimal"></label>
+              <label class="field"><span>Account currency</span><input id="r_ccy" maxlength="3" autocapitalize="characters"></label>
+              <label class="field"><span>Volume step (lots)</span><input id="r_step" inputmode="decimal"></label>
+              <label class="field"><span>Minimum volume (lots)</span><input id="r_min" inputmode="decimal"></label>
+            </div>
+            <label class="field"><span>Time zone for "today"</span><input id="r_tz" autocomplete="off" spellcheck="false"></label>
+            <p class="hint">Starting balance is unconfirmed: the demo showed 300,000 although 100,000 was selected. Volume step and minimum are typical values, not read from the broker yet. A funded-account firm may reset its day at a different time.</p>
+          </div>
+        </section>
+      </div>
+      <section class="card">
+        <p class="err" id="rulesMsg" hidden style="margin-bottom:12px"></p>
+        <div class="grid2"><button class="primary" id="saveRules" type="button">Save rules</button><button class="ghost" id="resetRules" type="button">Reset to defaults</button></div>
+      </section>
+    </main>
+  </div>
+</div>
+<!-- ENTRY PAGE: trade fields on top, Notion-style notes below -->
+<div class="entry" id="entryPage" hidden role="dialog" aria-modal="true" aria-label="Journal entry">
+  <div class="entry-page">
+    <div class="entry-bar">
+      <button type="button" class="small ghost" id="entryBack">← Back</button>
+      <span class="entry-status" id="entryStatus">New entry</span>
+      <div class="entry-actions">
+        <button type="button" class="small ghost danger" id="entryDelete" hidden>Delete</button>
+        <button type="button" class="small primary" id="entrySave">Save entry</button>
+      </div>
+    </div>
+    <h1 class="entry-title" id="entryTitle">New entry</h1>
+
+    <div class="resultbar">
+      <span class="rbadge open" id="e_badge">Open</span>
+      <span class="rtext" id="e_resultText">Fill in the trade below</span>
+    </div>
+
+    <div class="props">
+      <label class="field wide"><span>Why did you take this trade? <small>one or two lines</small></span>
+        <textarea id="e_why" rows="2" maxlength="240" placeholder="e.g. Retest of 1.1000 held after the Asia high broke"></textarea></label>
+
+      <div class="row3">
+        <label class="field"><span>Symbol</span><input id="e_pair" list="pairs" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+        <div class="field"><span class="label">Direction</span>
+          <div class="seg" role="radiogroup" aria-label="Direction">
+            <div><input type="radio" name="edir" id="edir-buy" value="buy" checked><label for="edir-buy">Long</label></div>
+            <div><input type="radio" name="edir" id="edir-sell" value="sell"><label for="edir-sell">Short</label></div>
+          </div>
+        </div>
+        <label class="field"><span>Size (lots)</span><input id="e_lots" inputmode="decimal" autocomplete="off" placeholder="0.20"></label>
+      </div>
+
+      <div class="pgroup">Entry</div>
+      <div class="row3">
+        <label class="field"><span>Date</span><input id="e_entryDate" type="date"></label>
+        <label class="field"><span>Time</span><input id="e_entryTime" type="time"></label>
+        <label class="field"><span>Price</span><input id="e_entry" inputmode="decimal" autocomplete="off" placeholder="1.10010"></label>
+      </div>
+
+      <div class="pgroup">Exit <span class="sub">leave empty while the trade is still open</span></div>
+      <div class="row3">
+        <label class="field"><span>Date</span><input id="e_exitDate" type="date"></label>
+        <label class="field"><span>Time</span><input id="e_exitTime" type="time"></label>
+        <label class="field"><span>Price</span><input id="e_exit" inputmode="decimal" autocomplete="off" placeholder="1.10510"></label>
+      </div>
+
+      <div class="pgroup">Money <span class="sub">type a minus for a loss. Charges are always a cost.</span></div>
+      <div class="row4">
+        <div class="field"><label class="label" for="e_pnl">Profit / loss</label>
+          <div class="sign"><input id="e_pnl" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="-120.50 or 85"><button type="button" class="pm" id="e_pnlSign" aria-label="Switch between profit and loss">±</button></div></div>
+        <div class="field"><label class="label" for="e_charges">Charges</label>
+          <div class="sign"><input id="e_charges" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="-3.50"><button type="button" class="pm" id="e_chSign" aria-label="Switch the sign of the charges">±</button></div></div>
+        <div class="field"><span class="label">Total</span><div class="total" id="e_total" aria-live="polite">—</div></div>
+        <label class="field"><span>Risk : reward</span><input id="e_rr" inputmode="text" autocomplete="off" spellcheck="false" placeholder="1:2"></label>
+      </div>
+
+      <div class="pgroup">For your stats <span class="sub">these two make your results measurable</span></div>
+      <div class="row2">
+        <label class="field"><span>Stop loss price <small>gives your R multiple</small></span><input id="e_stop" inputmode="decimal" autocomplete="off" placeholder="1.09760"></label>
+        <label class="field"><span>Setup</span><input id="e_setup" list="setups" autocomplete="off" placeholder="breakout, pullback, …"></label>
+      </div>
+    </div>
+
+    <div class="entry-calc" id="entryCalc" aria-live="polite"></div>
+    <p class="err" id="entryMsg" hidden></p>
+
+    <div class="notes-head"><h2>Notes</h2><span class="sub" id="notesHint"></span></div>
+    <div class="notes" id="notesHost"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<div class="lightbox" id="lightbox" hidden><img id="lightboxImg" alt="Chart screenshot"></div>
+<div class="auth" id="auth" hidden>
+  <form class="card stack" id="loginForm">
+    <h2>Sign in</h2>
+    <p class="hint" style="margin:0">Your journal is private. Sign in with the account you created in Supabase.</p>
+    <label class="field"><span>Email</span><input id="loginEmail" type="email" autocomplete="username" required></label>
+    <label class="field"><span>Password</span><input id="loginPassword" type="password" autocomplete="current-password" required></label>
+    <p class="err" id="loginMsg" hidden></p>
+    <button class="primary" id="loginBtn" type="submit">Sign in</button>
+  </form>
+</div>
+
+<script src="config.js" data-hosted></script>
+<script src="vendor/supabase-js.umd.js" data-hosted></script>
+<script src="vendor/editorjs/editorjs.umd.js" data-hosted></script>
+<script src="vendor/editorjs/header.umd.js" data-hosted></script>
+<script src="vendor/editorjs/list.umd.js" data-hosted></script>
+<script src="vendor/editorjs/checklist.umd.js" data-hosted></script>
+<script src="vendor/editorjs/quote.umd.js" data-hosted></script>
+<script src="vendor/editorjs/delimiter.umd.js" data-hosted></script>
+<script src="vendor/editorjs/image.umd.js" data-hosted></script>
+<script src="vendor/editorjs/code.umd.js" data-hosted></script>
+<script src="vendor/editorjs/inline-code.umd.js" data-hosted></script>
+<script src="vendor/editorjs/marker.umd.js" data-hosted></script>
+<script src="vendor/editorjs/table.umd.js" data-hosted></script>
+<script src="core.js"></script>
+<script src="app.js"></script>
