@@ -590,13 +590,13 @@
       const list = Core.upcomingEvents(S.calendar, f.pair, now, 3);
       if (!list.length) newsKids.push(h("p", { class: "pb-line", text: "No more high or medium impact events this week for these currencies. Next week's calendar is published later in the week." }));
       for (const e of list) {
-        newsKids.push(h("div", { class: "evt" },
+        newsKids.push(h("a", { class: "evt", href: Core.forexFactoryDayUrl(e.time, tz()), target: "_blank", rel: "noopener noreferrer", title: "Open this day on Forex Factory" },
           h("span", { class: "imp " + e.impact, text: e.impact === "Medium" ? "Med" : e.impact }),
-          h("div", {}, h("b", { text: `${e.currency} ${e.title}` }), h("small", { text: [e.forecast && `forecast ${e.forecast}`, e.previous && `previous ${e.previous}`].filter(Boolean).join(" · ") || "no forecast listed" })),
+          h("div", {}, h("b", {}, `${e.currency} ${e.title} `, h("span", { class: "go", text: "↗" })), h("small", { text: [e.forecast && `forecast ${e.forecast}`, e.previous && `previous ${e.previous}`].filter(Boolean).join(" · ") || "no forecast listed" })),
           h("div", { class: "when" }, h("b", { text: inText(e.inMinutes) }), evTime(e.time))));
       }
       const age = Core.calendarAgeMin(S.calendar, now);
-      newsKids.push(h("p", { class: "hint", text: `Forex Factory calendar${age === null ? "" : `, updated ${dur(Math.max(0, age))} ago`}. Times in ${tz()}.` + (age !== null && age > 240 ? " This is old: the hourly refresh may have stopped." : "") }));
+      newsKids.push(h("p", { class: "hint", text: `The next 3 High-impact events for these currencies, soonest first (Medium ones fill the gaps). Click one to open that day on Forex Factory. Forex Factory calendar${age === null ? "" : `, updated ${dur(Math.max(0, age))} ago`}. Times in ${tz()}.` + (age !== null && age > 240 ? " This is old: the hourly refresh may have stopped." : "") }));
     }
     out.push(sec(`Next news for ${cur[0]} and ${cur[1]}`, ...newsKids));
 

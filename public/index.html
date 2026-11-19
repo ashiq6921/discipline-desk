@@ -99,7 +99,8 @@ nav.side {
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
 h2 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
 .view { display: flex; flex-direction: column; gap: 20px; }
-.view.plan { display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 20px; align-items: start; }
+.view.plan { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+#cardCalc { order: 1; } #cardPair { order: 2; } #cardRules { order: 3; } #cardLog { order: 4; } #cardChart { order: 5; grid-column: 1 / -1; } #cardRecent { order: 6; } #cardHours { order: 7; }
 .col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
@@ -252,7 +253,10 @@ input[type="file"] { padding: 9px 12px; min-height: 46px; font-size: 14px; }
 .rbar .mk { position: absolute; top: -5px; width: 3px; height: 22px; border-radius: 2px; transform: translateX(-1px); }
 .rbar .mk.stop { background: var(--down); } .rbar .mk.tgt { background: var(--up); }
 .rbar .tick { position: absolute; top: 18px; font-size: 10.5px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
-.evt { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: start; padding: 9px 0; border-top: 1px solid var(--line); }
+.evt { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: start; padding: 9px 8px; margin: 0 -8px; border-top: 1px solid var(--line); color: inherit; text-decoration: none; border-radius: 10px; }
+a.evt:hover { background: rgba(255,255,255,.06); }
+a.evt:focus-visible { outline: 2px solid var(--lime); }
+.evt .go { color: var(--muted); font-weight: 400; }
 .evt:first-of-type { border-top: 0; }
 .imp { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; border-radius: 6px; padding: 2px 7px; text-transform: uppercase; }
 .imp.High { background: rgba(255,107,100,.16); color: var(--down); } .imp.Medium { background: rgba(242,185,85,.16); color: var(--amber); }
@@ -426,11 +430,8 @@ mark.cdx-marker { background: rgba(198,242,58,.34); color: inherit; padding: 1px
 /* ---- tablet and phone ---- */
 @media (max-width: 1180px) {
   .view.plan { grid-template-columns: 1fr; }
-  .view.plan .col { display: contents; }
-  .view.plan .duo { display: contents; }
-  .view.plan > * , .view.plan .col > *, .view.plan .duo > * { min-width: 0; }
-  .view.plan { display: flex; flex-direction: column; }
-  #cardCalc { order: 1; } #cardPair { order: 2; } #cardRules { order: 3; } #cardLog { order: 4; } #cardChart { order: 5; } #cardRecent { order: 6; } #cardHours { order: 7; }
+  #cardChart { grid-column: auto; }
+}
 }
 @media (max-width: 1100px) {
   .jgrid { grid-template-columns: 1fr; }
@@ -509,93 +510,94 @@ mark.cdx-marker { background: rgba(198,242,58,.34); color: inherit; padding: 1px
 
     <!-- PLAN -->
     <main id="view-plan" class="view plan" hidden>
-      <div class="col">
-        <section class="card glow" id="cardChart">
-          <div class="card-head">
-            <h2>Equity curve</h2>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <div class="mini" role="group" aria-label="Metric"><button type="button" id="mMoney" aria-pressed="true">Money</button><button type="button" id="mR" aria-pressed="false">R</button></div>
-              <div class="mini"><select id="chartRange" aria-label="Range"><option value="all">All time</option><option value="30">30 days</option><option value="7">7 days</option></select></div>
+      <section class="card" id="cardCalc">
+        <div class="card-head"><h2>Position size calculator</h2></div>
+        <div class="stack">
+          <div class="grid3">
+            <label class="field"><span>Pair</span><input id="pair" list="pairs" value="EURUSD" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+            <label class="field"><span>Timeframe</span>
+              <select id="tf"><option>M5</option><option>M15</option><option>M30</option><option selected>H1</option><option>H4</option><option>D1</option></select>
+            </label>
+            <div class="field"><span class="label">Direction</span>
+              <div class="seg" role="radiogroup" aria-label="Direction">
+                <div><input type="radio" name="dir" id="dir-buy" value="buy" checked><label for="dir-buy">Buy</label></div>
+                <div><input type="radio" name="dir" id="dir-sell" value="sell"><label for="dir-sell">Sell</label></div>
+              </div>
             </div>
           </div>
-          <div class="hero"><b id="heroValue">—</b><span class="delta flat" id="heroPct" hidden></span></div>
-          <p class="sub" id="heroSub">Equity from the calculator. The curve shows closed-trade results.</p>
-          <div class="chart" id="chart"></div>
-          <div class="tip" id="chartTip" hidden></div>
-        </section>
-
-        <div class="duo">
-          <section class="card" id="cardRules">
-            <div class="card-head"><h2>Rule check</h2></div>
-            <div id="ruleMeters"></div>
-          </section>
-          <section class="card" id="cardRecent">
-            <div class="card-head"><h2>Recent trades</h2><a class="link" href="#journal">View all</a></div>
-            <div class="recent" id="recent"></div>
-          </section>
-        </div>
-
-        <section class="card" id="cardHours">
-          <div class="card-head"><h2>Market hours</h2><span class="sub" id="hoursNote"></span></div>
-          <div class="sessions" id="sessions"></div>
-        </section>
-      </div>
-
-      <div class="col">
-        <section class="card" id="cardCalc">
-          <div class="card-head"><h2>Position size calculator</h2></div>
-          <div class="stack">
-            <div class="grid2">
-              <label class="field"><span>Pair</span><input id="pair" list="pairs" value="EURUSD" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
-              <label class="field"><span>Timeframe</span>
-                <select id="tf"><option>M5</option><option>M15</option><option>M30</option><option selected>H1</option><option>H4</option><option>D1</option></select>
-              </label>
-            </div>
-            <datalist id="pairs"><option>EURUSD</option><option>GBPUSD</option><option>USDJPY</option><option>AUDUSD</option><option>USDCAD</option><option>USDCHF</option><option>NZDUSD</option><option>EURJPY</option><option>GBPJPY</option><option>EURGBP</option></datalist>
-            <div class="seg" role="radiogroup" aria-label="Direction">
-              <div><input type="radio" name="dir" id="dir-buy" value="buy" checked><label for="dir-buy">Buy</label></div>
-              <div><input type="radio" name="dir" id="dir-sell" value="sell"><label for="dir-sell">Sell</label></div>
-            </div>
-            <div class="grid2">
-              <label class="field"><span id="entryLabel">Entry (ask)</span><input id="entry" inputmode="decimal" autocomplete="off" placeholder="1.10010"></label>
-              <label class="field"><span>Stop loss</span><input id="stop" inputmode="decimal" autocomplete="off" placeholder="1.09760"></label>
-              <label class="field"><span>Target</span><input id="target" inputmode="decimal" autocomplete="off" placeholder="1.10510"></label>
-              <label class="field"><span>Risk %</span><input id="risk" inputmode="decimal" autocomplete="off"></label>
-              <label class="field"><span id="equityLabel">Equity (USD)</span><input id="equity" inputmode="decimal" autocomplete="off" placeholder="300000"></label>
-              <label class="field"><span>Equity at start of today</span><input id="dayStart" inputmode="decimal" autocomplete="off" placeholder="optional"></label>
-              <label class="field"><span>ATR (price units)</span><input id="atr" inputmode="decimal" autocomplete="off" placeholder="0.0008"></label>
-              <label class="field"><span>ATR multiple</span><input id="atrMult" inputmode="decimal" autocomplete="off" value="1.5"></label>
-            </div>
+          <datalist id="pairs"><option>EURUSD</option><option>GBPUSD</option><option>USDJPY</option><option>AUDUSD</option><option>USDCAD</option><option>USDCHF</option><option>NZDUSD</option><option>EURJPY</option><option>GBPJPY</option><option>EURGBP</option></datalist>
+          <div class="grid3">
+            <label class="field"><span id="entryLabel">Entry (ask)</span><input id="entry" inputmode="decimal" autocomplete="off" placeholder="1.10010"></label>
+            <label class="field"><span>Stop loss</span><input id="stop" inputmode="decimal" autocomplete="off" placeholder="1.09760"></label>
+            <label class="field"><span>Target</span><input id="target" inputmode="decimal" autocomplete="off" placeholder="1.10510"></label>
+          </div>
+          <div class="grid3">
+            <label class="field"><span>Risk %</span><input id="risk" inputmode="decimal" autocomplete="off"></label>
+            <label class="field"><span id="equityLabel">Equity (USD)</span><input id="equity" inputmode="decimal" autocomplete="off" placeholder="300000"></label>
+            <label class="field"><span>Equity at day start</span><input id="dayStart" inputmode="decimal" autocomplete="off" placeholder="optional"></label>
+          </div>
+          <div class="grid3">
+            <label class="field"><span>ATR (price units)</span><input id="atr" inputmode="decimal" autocomplete="off" placeholder="0.0008"></label>
+            <label class="field"><span>ATR multiple</span><input id="atrMult" inputmode="decimal" autocomplete="off" value="1.5"></label>
             <label class="field" id="convRow" hidden><span id="convLabel">Conversion rate</span><input id="conv" inputmode="decimal" autocomplete="off"></label>
-            <p class="hint" id="riskHint"></p>
-            <div id="result" aria-live="polite"></div>
-            <p class="hint">Copy equity from cTrader, floating profit and loss included. Live balance arrives with the hosted version.</p>
           </div>
-        </section>
+          <p class="hint" id="riskHint"></p>
+          <div id="result" aria-live="polite"></div>
+          <p class="hint">Copy equity from cTrader, floating profit and loss included.</p>
+        </div>
+      </section>
 
-        <section class="card" id="cardPair">
-          <div class="card-head"><h2 id="pairTitle">Pair brief</h2><span class="sub" id="pairSub"></span></div>
-          <div id="pairBrief"></div>
-        </section>
+      <section class="card" id="cardPair">
+        <div class="card-head"><h2 id="pairTitle">Pair brief</h2><span class="sub" id="pairSub"></span></div>
+        <div id="pairBrief"></div>
+      </section>
 
-        <section class="card" id="cardLog">
-          <div class="card-head"><h2>Log this trade</h2></div>
-          <div class="stack">
-            <label class="field"><span>Setup</span><input id="setup" list="setups" autocomplete="off" placeholder="breakout, pullback, …"></label>
-            <datalist id="setups"></datalist>
-            <label class="field"><span>Why this trade</span><textarea id="reason" placeholder="What you saw, what has to happen next"></textarea></label>
-            <div class="field" id="shotField" hidden>
-              <span class="label">Chart screenshot</span>
-              <input type="file" id="shotInput" accept="image/*">
-              <img id="shotPreview" class="shot-preview" alt="Screenshot preview" hidden>
-              <button type="button" class="small ghost" id="shotClear" hidden style="align-self:flex-start">Remove screenshot</button>
-              <p class="hint">Tip: on a computer, copy a screenshot and press Ctrl or Cmd + V on this page. Images are shrunk to 2000 px before upload.</p>
-            </div>
-            <p class="err" id="logMsg" hidden></p>
-            <button class="primary" id="logBtn" type="button" disabled>Log trade</button>
+      <section class="card" id="cardRules">
+        <div class="card-head"><h2>Rule check</h2></div>
+        <div id="ruleMeters"></div>
+      </section>
+
+      <section class="card" id="cardLog">
+        <div class="card-head"><h2>Log this trade</h2></div>
+        <div class="stack">
+          <label class="field"><span>Setup</span><input id="setup" list="setups" autocomplete="off" placeholder="breakout, pullback, …"></label>
+          <datalist id="setups"></datalist>
+          <label class="field"><span>Why this trade</span><textarea id="reason" placeholder="What you saw, what has to happen next"></textarea></label>
+          <div class="field" id="shotField" hidden>
+            <span class="label">Chart screenshot</span>
+            <input type="file" id="shotInput" accept="image/*">
+            <img id="shotPreview" class="shot-preview" alt="Screenshot preview" hidden>
+            <button type="button" class="small ghost" id="shotClear" hidden style="align-self:flex-start">Remove screenshot</button>
+            <p class="hint">Tip: on a computer, copy a screenshot and press Ctrl or Cmd + V on this page. Images are shrunk to 2000 px before upload.</p>
           </div>
-        </section>
-      </div>
+          <p class="err" id="logMsg" hidden></p>
+          <button class="primary" id="logBtn" type="button" disabled>Log trade</button>
+        </div>
+      </section>
+
+      <section class="card glow" id="cardChart">
+        <div class="card-head">
+          <h2>Equity curve</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div class="mini" role="group" aria-label="Metric"><button type="button" id="mMoney" aria-pressed="true">Money</button><button type="button" id="mR" aria-pressed="false">R</button></div>
+            <div class="mini"><select id="chartRange" aria-label="Range"><option value="all">All time</option><option value="30">30 days</option><option value="7">7 days</option></select></div>
+          </div>
+        </div>
+        <div class="hero"><b id="heroValue">—</b><span class="delta flat" id="heroPct" hidden></span></div>
+        <p class="sub" id="heroSub">Equity from the calculator. The curve shows closed-trade results.</p>
+        <div class="chart" id="chart"></div>
+        <div class="tip" id="chartTip" hidden></div>
+      </section>
+
+      <section class="card" id="cardRecent">
+        <div class="card-head"><h2>Recent trades</h2><a class="link" href="#journal">View all</a></div>
+        <div class="recent" id="recent"></div>
+      </section>
+
+      <section class="card" id="cardHours">
+        <div class="card-head"><h2>Market hours</h2><span class="sub" id="hoursNote"></span></div>
+        <div class="sessions" id="sessions"></div>
+      </section>
     </main>
 
     <!-- JOURNAL -->

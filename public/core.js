@@ -559,6 +559,13 @@
       .sort((a, b) => a.inMinutes - b.inMinutes);
   }
 
+  /** Forex Factory's calendar page for the day an event falls on, in the given time zone. (The feed has no per-event link.) */
+  function forexFactoryDayUrl(iso, tzName = "UTC") {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: tzName, month: "short", day: "numeric", year: "numeric" }).formatToParts(new Date(iso));
+    const g = (t) => parts.find((x) => x.type === t).value;
+    return `https://www.forexfactory.com/calendar?day=${g("month").toLowerCase()}${g("day")}.${g("year")}`;
+  }
+
   /** Minutes since the calendar data was written, or null when unknown. */
   const calendarAgeMin = (cal, now = new Date()) => (cal && cal.generated_at ? Math.round((now - new Date(cal.generated_at)) / 60000) : null);
 
@@ -624,7 +631,7 @@
   root.Core = {
     num, plain, fixed, toNum, parsePair, pipSize, pipValuePerLot, calculatePosition, suggestStop,
     drawdownPct, allowedRiskPct, checkRules, localDay, dayStats, buildTrade, buildSimpleEntry, parseMoney, parseRatio, closeTrade, summarize, journalStats, dailyNet, notesToText, notesForStorage, imagePaths,
-    typicalRange, stopCheck, pairCurrencies, upcomingEvents, newsWarnings, calendarAgeMin, pairRecord, currencyLegs, exposureCheck, TYPICAL_RANGES,
+    typicalRange, stopCheck, pairCurrencies, forexFactoryDayUrl, upcomingEvents, newsWarnings, calendarAgeMin, pairRecord, currencyLegs, exposureCheck, TYPICAL_RANGES,
     toCsv, COLUMNS, DEFAULT_RULES, BUY, SELL,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = root.Core;
